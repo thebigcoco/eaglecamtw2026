@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>YouTube 四影片同步播放器</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #101114;
+      color: #f4f4f5;
+    }
+    header {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      border-bottom: 1px solid #27272a;
+      background: #18181b;
+    }
+    .title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 750;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: -8px;
+      align-items: center;
+    }
+    .links span { color: #d4d4d8; }
+    .links a {
+      color: #67e8f9;
+      text-decoration: none;
+      font-weight: 650;
+    }
+    .links a:visited { color: #67e8f9; }
+    .links a:hover { text-decoration: underline; }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 8px;
+    }
+    input {
+      width: 100%;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      padding: 10px;
+      color: #fafafa;
+      background: #09090b;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    button {
+      border: 0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: #09090b;
+      background: #fafafa;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    button.secondary {
+      color: #fafafa;
+      background: #3f3f46;
+    }
+    main {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      padding: 8px;
+      min-height: calc(100vh - 152px);
+    }
+    .player {
+      min-height: 260px;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+    }
+    .player > div,
+    iframe {
+      width: 100%;
+      height: 100%;
+      min-height: 260px;
+    }
+    @media (max-width: 900px) {
+      .controls,
+      main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="title">2026猛禽育雛直播. Credit: 鷹你而生/RRGT</p>
+    <nav class="links" aria-label="頻道連結">
+      <span>頻道連結</span>
+      <a href="https://www.youtube.com/@RRGT" target="_blank" rel="noopener noreferrer">RRGT</a>
+      <a href="https://www.youtube.com/@soaringforyou" target="_blank" rel="noopener noreferrer">鷹你而生</a>
+    </nav>
+    <div class="controls">
+      <input id="url0" placeholder="YouTube 影片 1 URL 或 ID" />
+      <input id="url1" placeholder="YouTube 影片 2 URL 或 ID" />
+      <input id="url2" placeholder="YouTube 影片 3 URL 或 ID" />
+      <input id="url3" placeholder="YouTube 影片 4 URL 或 ID" />
+    </div>
+    <div class="buttons">
+      <button id="load">載入四部影片</button>
+      <button id="play">同時播放</button>
+      <button id="pause" class="secondary">同時暫停</button>
+      <button id="mute" class="secondary">切換靜音</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="player"><div id="player0"></div></section>
+    <section class="player"><div id="player1"></div></section>
+    <section class="player"><div id="player2"></div></section>
+    <section class="player"><div id="player3"></div></section>
+  </main>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    const players = [];
+    let apiReady = false;
+    let muted = true;
+
+    function onYouTubeIframeAPIReady() {
+      apiReady = true;
+      loadPlayers();
+    }
+
+    function extractVideoId(value) {
+      const text = value.trim();
+      if (!text) return "";
+      if (/^[\w-]{11}$/.test(text)) return text;
+
+      try {
+        const url = new URL(text);
+        if (url.hostname.includes("youtu.be")) return url.pathname.slice(1, 12);
+        if (url.searchParams.get("v")) return url.searchParams.get("v").slice(0, 11);
+        const match = url.pathname.match(/\/(embed|shorts)\/([\w-]{11})/);
+        return match ? match[2] : "";
+      } catch {
+        const match = text.match(/[\w-]{11}/);
+        return match ? match[0] : "";
+      }
+    }
+
+    function loadPlayers() {
+      if (!apiReady) return;
+      const origin = location.origin && location.origin !== "null" ? location.origin : "http://localhost:8000";
+
+      for (let i = 0; i < 4; i++) {
+        const id = extractVideoId(document.getElementById(`url${i}`).value);
+        if (!id) continue;
+
+        if (players[i]?.loadVideoById) {
+          players[i].loadVideoById(id);
+          players[i].mute();
+          continue;
+        }
+
+        players[i] = new YT.Player(`player${i}`, {
+          videoId: id,
+          playerVars: {
+            autoplay: 0,
+            controls: 1,
+            origin,
+            playsinline: 1,
+            rel: 0
+          },
+          events: {
+            onReady: (event) => {
+              if (muted) event.target.mute();
+            }
+          }
+        });
+      }
+    }
+
+    function runAll(method) {
+      players.forEach((player) => {
+        if (player && typeof player[method] === "function") player[method]();
+      });
+    }
+
+    document.getElementById("load").addEventListener("click", loadPlayers);
+    document.getElementById("play").addEventListener("click", () => runAll("playVideo"));
+    document.getElementById("pause").addEventListener("click", () => runAll("pauseVideo"));
+    document.getElementById("mute").addEventListener("click", () => {
+      muted = !muted;
+      players.forEach((player) => {
+        if (!player) return;
+        muted ? player.mute() : player.unMute();
+      });
+    });
+  </script>
+</body>
+</html>
