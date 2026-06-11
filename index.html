@@ -99,7 +99,7 @@
 </head>
 <body>
   <header>
-    <p class="title">2026 猛禽育雛直播 | 感謝 鷹你而生、RRGT 讓保全們分身乏術</p>
+    <p class="title">2026猛禽育雛直播. Credit: 鷹你而生/RRGT</p>
     <nav class="links" aria-label="頻道連結">
       <span>頻道連結</span>
       <a href="https://www.youtube.com/@RRGT" target="_blank" rel="noopener noreferrer">RRGT</a>
@@ -112,6 +112,7 @@
       <input id="url3" placeholder="YouTube 影片 4 URL 或 ID" />
     </div>
     <div class="buttons">
+      <button id="loadPreset">載入RRGT/鷹你而生</button>
       <button id="load">載入四部影片</button>
       <button id="play">同時播放</button>
       <button id="pause" class="secondary">同時暫停</button>
@@ -128,6 +129,12 @@
 
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
+    const presetUrls = [
+      "https://www.youtube.com/watch?v=8CmECCFBWiY",
+      "https://www.youtube.com/watch?v=gsCR_X6Dx_U",
+      "https://www.youtube.com/watch?v=q_2234WOCkA",
+      "https://www.youtube.com/watch?v=p6BkLk3coZw"
+    ];
     const players = [];
     let apiReady = false;
     let muted = true;
@@ -186,12 +193,20 @@
       }
     }
 
+    function loadPresetPlayers() {
+      presetUrls.forEach((url, index) => {
+        document.getElementById(`url${index}`).value = url;
+      });
+      loadPlayers();
+    }
+
     function runAll(method) {
       players.forEach((player) => {
         if (player && typeof player[method] === "function") player[method]();
       });
     }
 
+    document.getElementById("loadPreset").addEventListener("click", loadPresetPlayers);
     document.getElementById("load").addEventListener("click", loadPlayers);
     document.getElementById("play").addEventListener("click", () => runAll("playVideo"));
     document.getElementById("pause").addEventListener("click", () => runAll("pauseVideo"));
